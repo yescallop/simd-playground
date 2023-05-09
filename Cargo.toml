@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "aoc-2022",
+    "cuter-nucleotides",
+    "trim-line-comments",
+]

@@ -1,0 +1,7 @@
+[build-system] # use this to indicate the name of the project
+  requires = ["setuptools>=61.0"]
+  build-backend = "setuptools.build_meta"
+[tool.setuptools]
+  package-dir = {"" = "pylib"}
+  packages = ["gyp", "gyp.generator"] # looks good
+# end of the file
