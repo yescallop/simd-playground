@@ -26,7 +26,8 @@ unsafe fn trim(input: &str, output: &mut String) {
     let packed_lfs = _mm512_set1_epi8(b'\n' as i8);
 
     let mut i = 0;
-    let mut borrow = false;
+    let mut diff = 0;
+    let mut borrow = 0;
     let mut buf_len = 0;
 
     while i + 64 <= input.len() {
@@ -35,10 +36,10 @@ unsafe fn trim(input: &str, output: &mut String) {
         let hash = _mm512_cmpeq_epi8_mask(text, packed_hashes);
         let lf = _mm512_cmpeq_epi8_mask(text, packed_lfs);
 
-        let diff;
-        (diff, borrow) = lf.borrowing_sub(hash, borrow);
+        borrow = _subborrow_u64(borrow, lf, hash, &mut diff);
 
         let mask = !(diff | hash) | lf;
+
         _mm512_mask_compressstoreu_epi8(buf.add(buf_len), mask, text);
         buf_len += mask.count_ones() as usize;
 
@@ -47,7 +48,7 @@ unsafe fn trim(input: &str, output: &mut String) {
 
     output.set_len(buf_len);
 
-    let mut trimmed = borrow;
+    let mut trimmed = borrow != 0;
     let mut untrimmed_start = i;
 
     while i < input.len() {
