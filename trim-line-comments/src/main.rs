@@ -1,5 +1,4 @@
 #![feature(stdsimd)]
-#![feature(bigint_helper_methods)]
 
 use std::{arch::x86_64::*, fs, io};
 
