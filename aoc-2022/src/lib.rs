@@ -1,5 +1,3 @@
-#![feature(stdsimd)]
-
 pub mod day_02;
 pub mod day_04;
 pub mod day_06;
@@ -11,7 +9,7 @@ use bytemuck::{AnyBitPattern, NoUninit};
 #[allow(unused)]
 fn print_bytes_of<T: NoUninit>(t: &T) {
     let bytes = bytemuck::bytes_of(t);
-    print_bytes(&bytes);
+    print_bytes(bytes);
 }
 
 #[allow(unused)]

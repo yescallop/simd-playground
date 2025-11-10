@@ -1,7 +1,18 @@
 [package]
 name = "aoc-simd"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+
+[lints]
+workspace = true
 
 [dependencies]
 bytemuck = "1"
+
+[dev-dependencies]
+criterion = "0.7"
+
+[[bench]]
+name = "bench"
+harness = false
+

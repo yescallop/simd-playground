@@ -69,7 +69,7 @@ unsafe fn _part1_avx512(input: &[u8]) -> u64 {
         let filled = _mm512_mask_blend_epi8(to_fill, chunk, ascii_zero);
 
         let nums = _mm512_cmpge_epi8_mask(filled, ascii_zero);
-        _mm512_mask_compressstoreu_epi8(buf_ptr.add(buf_len), nums, filled);
+        _mm512_mask_compressstoreu_epi8(buf_ptr.add(buf_len).cast(), nums, filled);
 
         buf_len += nums.count_ones() as usize;
 

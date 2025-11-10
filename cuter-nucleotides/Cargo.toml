@@ -1,14 +1,17 @@
 [package]
 name = "cuter-nucleotides"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+
+[lints]
+workspace = true
 
 [dependencies]
-rand = "0.8"
+rand = "0.9"
 bytemuck = { version = "1", features = ["nightly_stdsimd"] }
 
 [dev-dependencies]
-criterion = "0.4"
+criterion = "0.7"
 
 [[bench]]
 name = "bench"

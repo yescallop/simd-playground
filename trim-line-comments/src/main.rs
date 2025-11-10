@@ -1,5 +1,3 @@
-#![feature(stdsimd)]
-
 use std::{arch::x86_64::*, fs, io};
 
 fn main() -> io::Result<()> {
@@ -39,7 +37,7 @@ unsafe fn trim(input: &str, output: &mut String) {
 
         let mask = !(diff | hash) | lf;
 
-        _mm512_mask_compressstoreu_epi8(buf.add(buf_len), mask, text);
+        _mm512_mask_compressstoreu_epi8(buf.add(buf_len).cast(), mask, text);
         buf_len += mask.count_ones() as usize;
 
         i += 64;

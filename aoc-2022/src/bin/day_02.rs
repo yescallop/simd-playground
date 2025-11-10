@@ -1,5 +1,3 @@
-#![feature(stdsimd)]
-
 use std::{fs, io};
 
 fn main() -> io::Result<()> {

@@ -1,5 +1,3 @@
-#![feature(stdsimd)]
-
 use std::{fs, io};
 
 use aoc_simd::day_06::*;
