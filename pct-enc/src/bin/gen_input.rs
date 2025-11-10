@@ -1,6 +1,6 @@
 use std::fs;
 
-use pct_enc::naive::{Encode, PATH_TABLE};
+use pct_enc::naive::{Encode, table_bitset::PATH};
 use rand::Rng;
 
 fn main() {
@@ -12,7 +12,7 @@ fn main() {
     }
 
     let mut enc = Vec::with_capacity(1024 * 1024 * 3);
-    for chunk in Encode::new(PATH_TABLE, &raw) {
+    for chunk in Encode::new(PATH, &raw) {
         enc.extend_from_slice(chunk.as_bytes());
     }
 

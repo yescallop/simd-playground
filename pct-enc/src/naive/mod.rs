@@ -1,8 +1,7 @@
 //! Percent-encoding utilities.
 
-pub(crate) mod table;
-
-pub use table::{PATH as PATH_TABLE, Table};
+pub mod table_bitset;
+pub mod table_bool_array;
 
 use std::borrow::Cow;
 
@@ -167,13 +166,13 @@ pub(crate) fn encode_byte(x: u8) -> &'static [u8] {
 #[derive(Clone, Debug)]
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Encode<'s> {
-    table: Table,
+    table: table_bitset::Table,
     source: &'s [u8],
     to_enc: &'s [u8],
 }
 
 impl<'s> Encode<'s> {
-    pub fn new(table: Table, source: &'s [u8]) -> Self {
+    pub fn new(table: table_bitset::Table, source: &'s [u8]) -> Self {
         Self {
             table,
             source,

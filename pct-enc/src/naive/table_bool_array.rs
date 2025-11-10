@@ -5,11 +5,12 @@
 //!
 //! [RFC 5234]: https://datatracker.ietf.org/doc/html/rfc5234
 
-const MASK_PCT_ENCODED: u64 = 1 << b'%';
+const TABLE_LEN: usize = 257;
+const INDEX_PCT_ENCODED: usize = 256;
 
 /// A table specifying the byte patterns allowed in a string.
 #[derive(Clone, Copy, Debug)]
-pub struct Table(u64, u64);
+pub struct Table([bool; 257]);
 
 impl Table {
     /// Creates a table that only allows the given unencoded bytes.
@@ -19,16 +20,16 @@ impl Table {
     /// Panics if any of the bytes is not ASCII or equals `0`, `1`, `2`, or `b'%'`.
     #[must_use]
     pub const fn new(mut bytes: &[u8]) -> Self {
-        let mut table = 0;
+        let mut table = [false; TABLE_LEN];
         while let [cur, rem @ ..] = bytes {
             assert!(
                 !matches!(cur, b'%' | 128..),
                 "cannot allow non-ASCII byte or %"
             );
-            table |= 1u128.wrapping_shl(*cur as u32);
+            table[*cur as usize] = true;
             bytes = rem;
         }
-        Self(table as u64, (table >> 64) as u64)
+        Self(table)
     }
 
     /// Combines two tables into one.
@@ -36,53 +37,36 @@ impl Table {
     /// Returns a new table that allows all the byte patterns allowed
     /// by `self` or by `other`.
     #[must_use]
-    pub const fn or(self, other: Self) -> Self {
-        Self(self.0 | other.0, self.1 | other.1)
+    pub const fn or(mut self, other: Self) -> Self {
+        let mut i = 0;
+        while i < TABLE_LEN {
+            self.0[i] |= other.0[i];
+            i += 1;
+        }
+        self
     }
 
     /// Marks this table as allowing percent-encoded octets.
     #[must_use]
-    pub const fn or_pct_encoded(self) -> Self {
-        Self(self.0 | MASK_PCT_ENCODED, self.1)
-    }
-
-    /// Subtracts from this table.
-    ///
-    /// Returns a new table that allows all the byte patterns allowed
-    /// by `self` but not allowed by `other`.
-    #[must_use]
-    pub const fn sub(self, other: Self) -> Self {
-        Self(self.0 & !other.0, self.1 & !other.1)
-    }
-
-    /// Checks whether the table is a subset of another, i.e., `other`
-    /// allows at least all the byte patterns allowed by `self`.
-    #[must_use]
-    pub const fn is_subset(self, other: Self) -> bool {
-        self.0 & other.0 == self.0 && self.1 & other.1 == self.1
+    pub const fn or_pct_encoded(mut self) -> Self {
+        self.0[INDEX_PCT_ENCODED] = true;
+        self
     }
 
     #[inline]
     pub(crate) const fn allows_ascii(self, x: u8) -> bool {
-        let table = if x < 64 {
-            self.0 & !MASK_PCT_ENCODED
-        } else if x < 128 {
-            self.1
-        } else {
-            0
-        };
-        table & 1u64.wrapping_shl(x as u32) != 0
+        self.0[x as usize]
     }
 
     /// Checks whether percent-encoded octets are allowed by the table.
     #[inline]
     #[must_use]
     pub const fn allows_pct_encoded(self) -> bool {
-        self.0 & MASK_PCT_ENCODED != 0
+        self.0[INDEX_PCT_ENCODED]
     }
 
     /// Validates the given string with the table.
-    pub fn validate(self, s: &[u8]) -> bool {
+    pub fn validate(&self, s: &[u8]) -> bool {
         let mut i = 0;
 
         macro_rules! do_loop {
