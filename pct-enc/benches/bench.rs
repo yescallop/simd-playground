@@ -7,7 +7,7 @@ criterion_group!(benches, bench_validate);
 criterion_main!(benches);
 
 fn bench_validate(c: &mut Criterion) {
-    let src = fs::read("input/enc.txt").unwrap();
+    let src = fs::read("enc.txt").unwrap();
 
     let mut group = c.benchmark_group("validate");
     group.throughput(Throughput::Bytes(src.len() as u64));
