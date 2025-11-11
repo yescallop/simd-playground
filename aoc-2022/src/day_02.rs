@@ -4,6 +4,7 @@ pub fn solve_avx512(input: &[u8]) -> (u32, u32) {
     unsafe { _solve_avx512(input) }
 }
 
+#[target_feature(enable = "avx512bw,avx512vl")]
 unsafe fn _solve_avx512(input: &[u8]) -> (u32, u32) {
     let len = input.len();
     let ptr = input.as_ptr();

@@ -12,6 +12,7 @@ macro_rules! u8x8 {
 const AND_MASK: u64 = u8x8!(0b110);
 const COMPRESS_MASK: u64 = u8x8!(0b10001000);
 
+#[target_feature(enable = "avx512vbmi2")]
 pub unsafe fn encode_mul_compress(src: &[u8], mut dst: *mut u8) {
     let len = src.len();
     let ptr = src.as_ptr();
@@ -37,6 +38,7 @@ pub unsafe fn encode_mul_compress(src: &[u8], mut dst: *mut u8) {
     encode_rest(src, i, dst);
 }
 
+#[target_feature(enable = "avx512bitalg")]
 pub unsafe fn encode_bitshuffle(src: &[u8], mut dst: *mut u8) {
     let len = src.len();
     let ptr = src.as_ptr();
@@ -65,6 +67,7 @@ pub unsafe fn encode_bitshuffle(src: &[u8], mut dst: *mut u8) {
 }
 
 // Original: Daniel Liu, aqrit
+#[target_feature(enable = "avx512bw")]
 pub unsafe fn encode_movepi8_mask(src: &[u8], mut dst: *mut u8) {
     let len = src.len();
     let ptr = src.as_ptr();
@@ -93,6 +96,7 @@ pub unsafe fn encode_movepi8_mask(src: &[u8], mut dst: *mut u8) {
 }
 
 // Source: Daniel Liu, aqrit
+#[target_feature(enable = "avx2")]
 pub unsafe fn encode_avx2_movemask(src: &[u8], mut dst: *mut u8) {
     let len = src.len();
     let ptr = src.as_ptr();
@@ -120,6 +124,7 @@ pub unsafe fn encode_avx2_movemask(src: &[u8], mut dst: *mut u8) {
     encode_rest(src, i, dst);
 }
 
+#[target_feature(enable = "bmi2")]
 pub unsafe fn encode_bmi2_pext(src: &[u8], mut dst: *mut u8) {
     let len = src.len();
     let ptr = src.as_ptr();
@@ -138,6 +143,7 @@ pub unsafe fn encode_bmi2_pext(src: &[u8], mut dst: *mut u8) {
     encode_rest(src, i, dst);
 }
 
+#[target_feature(enable = "bmi2")]
 unsafe fn encode_rest(src: &[u8], mut i: usize, mut dst: *mut u8) {
     let len = src.len();
     let ptr = src.as_ptr();
@@ -159,6 +165,7 @@ unsafe fn encode_rest(src: &[u8], mut i: usize, mut dst: *mut u8) {
     *dst = last;
 }
 
+#[target_feature(enable = "avx512vbmi")]
 pub unsafe fn decode_multishift(src: &[u8], mut dst: *mut u8) -> usize {
     let len = src.len();
     let ptr = src.as_ptr();
@@ -184,6 +191,7 @@ pub unsafe fn decode_multishift(src: &[u8], mut dst: *mut u8) -> usize {
     decode_rest(src, i, dst)
 }
 
+#[target_feature(enable = "avx512bw")]
 pub unsafe fn decode_shift_shuffle(src: &[u8], mut dst: *mut u8) -> usize {
     let len = src.len();
     let ptr = src.as_ptr();
@@ -216,6 +224,7 @@ pub unsafe fn decode_shift_shuffle(src: &[u8], mut dst: *mut u8) -> usize {
     decode_rest(src, i, dst)
 }
 
+#[target_feature(enable = "avx512bw,bmi2")]
 pub unsafe fn decode_pdep_shuffle(src: &[u8], mut dst: *mut u8) -> usize {
     let len = src.len();
     let ptr = src.as_ptr();

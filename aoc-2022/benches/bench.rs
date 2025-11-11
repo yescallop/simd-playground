@@ -38,7 +38,9 @@ fn bench_d6(c: &mut Criterion) {
     let mut group = c.benchmark_group("d6p1");
     group.throughput(Throughput::Bytes(input.len() as u64));
 
-    group.bench_function("avx512", |b| b.iter(|| part1_avx512(input.as_bytes())));
+    group.bench_function("avx512", |b| {
+        b.iter(|| unsafe { part1_avx512(input.as_bytes()) })
+    });
     group.bench_function("xor", |b| b.iter(|| part1_xor(input.as_bytes())));
     group.bench_function("naive", |b| b.iter(|| part1_naive(input.as_bytes())));
     group.bench_function("naive_short_circuit", |b| {
@@ -50,7 +52,9 @@ fn bench_d6(c: &mut Criterion) {
     let mut group = c.benchmark_group("d6p2");
     group.throughput(Throughput::Bytes(input.len() as u64));
 
-    group.bench_function("avx512", |b| b.iter(|| part2_avx512(input.as_bytes())));
+    group.bench_function("avx512", |b| {
+        b.iter(|| unsafe { part2_avx512(input.as_bytes()) })
+    });
     group.bench_function("xor", |b| b.iter(|| part2_xor(input.as_bytes())));
     group.bench_function("naive", |b| b.iter(|| part2_naive(input.as_bytes())));
     group.bench_function("naive_short_circuit", |b| {

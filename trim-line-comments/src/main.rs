@@ -10,6 +10,7 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
+#[target_feature(enable = "avx512vbmi2")]
 unsafe fn trim(input: &str, output: &mut String) {
     let input = input.as_bytes();
     let output = output.as_mut_vec();

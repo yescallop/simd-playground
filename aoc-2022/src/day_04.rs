@@ -7,6 +7,7 @@ pub fn part1_avx512(input: &[u8]) -> u64 {
     unsafe { _part1_avx512(input) }
 }
 
+#[target_feature(enable = "avx512vbmi2,avx512vl")]
 unsafe fn _part1_avx512(input: &[u8]) -> u64 {
     let input_len = input.len();
     let ptr = input.as_ptr();

@@ -1,13 +1,14 @@
 use std::arch::x86_64::*;
 
-pub fn part1_avx512(input: &[u8]) -> Option<usize> {
-    unsafe { solve_avx512::<4>(input) }
+pub unsafe fn part1_avx512(input: &[u8]) -> Option<usize> {
+    solve_avx512::<4>(input)
 }
 
-pub fn part2_avx512(input: &[u8]) -> Option<usize> {
-    unsafe { solve_avx512::<14>(input) }
+pub unsafe fn part2_avx512(input: &[u8]) -> Option<usize> {
+    solve_avx512::<14>(input)
 }
 
+#[target_feature(enable = "avx512bw")]
 unsafe fn solve_avx512<const N: usize>(input: &[u8]) -> Option<usize> {
     assert!(N >= 4);
     let len = input.len();
