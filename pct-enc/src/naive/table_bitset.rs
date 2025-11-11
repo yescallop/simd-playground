@@ -31,6 +31,10 @@ impl Table {
         Self(table as u64, (table >> 64) as u64)
     }
 
+    pub fn as_u64s(self) -> (u64, u64) {
+        (self.0, self.1)
+    }
+
     /// Combines two tables into one.
     ///
     /// Returns a new table that allows all the byte patterns allowed
@@ -115,6 +119,9 @@ pub const ALPHA: Table = new(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw
 
 /// `DIGIT = %x30-39`
 pub const DIGIT: Table = new(b"0123456789");
+
+/// `HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"`
+pub const HEXDIG: Table = DIGIT.or(new(b"ABCDEFabcdef"));
 
 /// `path = *( pchar / "/" )`
 pub const PATH: Table = PCHAR.or(new(b"/"));

@@ -116,6 +116,9 @@ pub const ALPHA: Table = new(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw
 /// `DIGIT = %x30-39`
 pub const DIGIT: Table = new(b"0123456789");
 
+/// `HEXDIG = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"`
+pub const HEXDIG: Table = DIGIT.or(new(b"ABCDEFabcdef"));
+
 /// `path = *( pchar / "/" )`
 pub const PATH: Table = PCHAR.or(new(b"/"));
 
