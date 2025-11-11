@@ -6,6 +6,6 @@ fn main() {
     let src = fs::read("enc.txt").unwrap();
 
     unsafe {
-        println!("{}", validate_ssse3_alignr(&src));
+        println!("{}", validate_ssse3_bsrli(&src));
     }
 }
