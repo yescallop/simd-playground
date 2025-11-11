@@ -21,4 +21,7 @@ fn bench_validate(c: &mut Criterion) {
     group.bench_function("ssse3_triple_loadu", |b| {
         b.iter(|| unsafe { validate_ssse3_triple_loadu(&src) })
     });
+    group.bench_function("ssse3_alignr", |b| {
+        b.iter(|| unsafe { validate_ssse3_alignr(&src) })
+    });
 }
