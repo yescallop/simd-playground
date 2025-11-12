@@ -16,7 +16,7 @@ impl Table {
     ///
     /// # Panics
     ///
-    /// Panics if any of the bytes is not ASCII or equals `0`, `1`, `2`, or `b'%'`.
+    /// Panics if any of the bytes is not ASCII or equals `b'%'`.
     #[must_use]
     pub const fn new(mut bytes: &[u8]) -> Self {
         let mut table = 0;
