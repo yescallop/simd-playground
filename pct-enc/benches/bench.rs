@@ -24,7 +24,10 @@ fn bench_validate(c: &mut Criterion) {
     group.bench_function("ssse3_alignr", |b| {
         b.iter(|| unsafe { validate_ssse3_alignr(&src) })
     });
-    group.bench_function("ssse3_bsrli", |b| {
-        b.iter(|| unsafe { validate_ssse3_bsrli(&src) })
+    group.bench_function("sse41_bsrli", |b| {
+        b.iter(|| unsafe { validate_sse41_bsrli(&src) })
+    });
+    group.bench_function("sse41_bslli", |b| {
+        b.iter(|| unsafe { validate_sse41_bslli(&src) })
     });
 }
