@@ -1,0 +1,228 @@
+use crate::naive::table_bitset;
+use std::arch::x86_64::*;
+
+#[target_feature(enable = "sse4.1")]
+pub unsafe fn validate_triple_loadu(src: &[u8]) -> bool {
+    let len = src.len();
+    let ptr = src.as_ptr();
+
+    // the corresponding bit for % is set in this table
+    let allowed = table_bitset::PATH.as_u64s();
+    let disallowed = _mm_set_epi64x(!allowed.1 as _, !allowed.0 as _);
+
+    let hexdig = table_bitset::HEXDIG.as_u64s();
+    let not_hexdig = _mm_set_epi64x(!hexdig.1 as _, !hexdig.0 as _);
+
+    let pct = _mm_set1_epi8(b'%' as _);
+    let low_nibble_mask = _mm_set1_epi8(0xf);
+    let mask_table = _mm_set1_epi64x(0x8040201008040201u64 as _);
+
+    let mut i = 0;
+    while i + 16 + 2 <= len {
+        let bytes_0 = _mm_loadu_si128(ptr.add(i).cast()); // 4 0.5 1*p23
+        let bytes_1 = _mm_loadu_si128(ptr.add(i + 1).cast()); // 4 0.5 1*p23
+        let bytes_2 = _mm_loadu_si128(ptr.add(i + 2).cast()); // 4 0.5 1*p23
+
+        // if non-ASCII, mask will be 0, which disallows the byte
+        let mask_per_byte_0 = _mm_shuffle_epi8(mask_table, bytes_0); // 1 0.5 1*p15
+        let mask_per_byte_1 = _mm_shuffle_epi8(mask_table, bytes_1); // 1 0.5 1*p15
+        let mask_per_byte_2 = _mm_shuffle_epi8(mask_table, bytes_2); // 1 0.5 1*p15
+
+        let is_pct = _mm_cmpeq_epi8(bytes_0, pct); // 1 0.5 1*p01
+
+        let word_shr_3_0 = _mm_srli_epi16::<3>(bytes_0); // 1 0.5 1*p01
+        let word_shr_3_1 = _mm_srli_epi16::<3>(bytes_1); // 1 0.5 1*p01
+        let word_shr_3_2 = _mm_srli_epi16::<3>(bytes_2); // 1 0.5 1*p01
+
+        let table_idx_per_byte_0 = _mm_and_si128(word_shr_3_0, low_nibble_mask); // 1 0.33 1*p015
+        let table_idx_per_byte_1 = _mm_and_si128(word_shr_3_1, low_nibble_mask); // 1 0.33 1*p015
+        let table_idx_per_byte_2 = _mm_and_si128(word_shr_3_2, low_nibble_mask); // 1 0.33 1*p015
+
+        let disallowed_per_byte_0 = _mm_shuffle_epi8(disallowed, table_idx_per_byte_0); // 1 0.5 1*p15
+        let not_hexdig_per_byte_1 = _mm_shuffle_epi8(not_hexdig, table_idx_per_byte_1); // 1 0.5 1*p15
+        let not_hexdig_per_byte_2 = _mm_shuffle_epi8(not_hexdig, table_idx_per_byte_2); // 1 0.5 1*p15
+
+        let nz_if_disallowed = _mm_and_si128(disallowed_per_byte_0, mask_per_byte_0); // 1 0.33 1*p015
+        let nz_if_not_hexdig_1 = _mm_and_si128(not_hexdig_per_byte_1, mask_per_byte_1); // 1 0.33 1*p015
+        let nz_if_not_hexdig_2 = _mm_and_si128(not_hexdig_per_byte_2, mask_per_byte_2); // 1 0.33 1*p015
+
+        let nz_if_not_hexdig_1_or_2 = _mm_or_si128(nz_if_not_hexdig_1, nz_if_not_hexdig_2); // 1 0.33 1*p015
+        let nz_if_invalid_pct = _mm_min_epu8(is_pct, nz_if_not_hexdig_1_or_2); // 1 0.5 1*p01
+
+        let nz_if_invalid = _mm_or_si128(nz_if_disallowed, nz_if_invalid_pct); // 1 0.33 1*p015
+        let is_valid = _mm_testz_si128(nz_if_invalid, nz_if_invalid); // 4 1 1*p0+1*p5
+
+        if is_valid == 0 {
+            return false;
+        }
+        i += 16;
+    }
+    table_bitset::PATH.validate(&src[i..])
+}
+
+#[target_feature(enable = "sse4.1")]
+pub unsafe fn validate_alignr(src: &[u8]) -> bool {
+    let len = src.len();
+    let ptr = src.as_ptr();
+
+    if len < 32 {
+        return table_bitset::PATH.validate(src);
+    }
+
+    // the corresponding bit for % is set in this table
+    let allowed = table_bitset::PATH.as_u64s();
+    let disallowed = _mm_set_epi64x(!allowed.1 as _, !allowed.0 as _);
+
+    let hexdig = table_bitset::HEXDIG.as_u64s();
+    let not_hexdig = _mm_set_epi64x(!hexdig.1 as _, !hexdig.0 as _);
+
+    let pct = _mm_set1_epi8(b'%' as _);
+    let low_nibble_mask = _mm_set1_epi8(0xf);
+    let mask_table = _mm_set1_epi64x(0x8040201008040201u64 as _);
+
+    let mut chunk = _mm_loadu_si128(ptr.cast());
+
+    // if non-ASCII, mask will be 0, which disallows the byte
+    let mut mask_per_byte = _mm_shuffle_epi8(mask_table, chunk);
+    let word_shr_3 = _mm_srli_epi16::<3>(chunk);
+    let mut table_idx_per_byte = _mm_and_si128(word_shr_3, low_nibble_mask);
+    let not_hexdig_per_byte = _mm_shuffle_epi8(not_hexdig, table_idx_per_byte);
+    let mut nz_if_not_hexdig = _mm_and_si128(not_hexdig_per_byte, mask_per_byte);
+
+    let mut i = 0;
+    while i + 32 <= len {
+        let next_chunk = _mm_loadu_si128(ptr.add(i + 16).cast()); // 4 0.5 1*p23
+
+        let is_pct = _mm_cmpeq_epi8(chunk, pct); // 1 0.5 1*p01
+
+        let disallowed_per_byte = _mm_shuffle_epi8(disallowed, table_idx_per_byte); // 1 0.5 1*p15
+        let nz_if_disallowed = _mm_and_si128(disallowed_per_byte, mask_per_byte); // 1 0.33 1*p015
+
+        mask_per_byte = _mm_shuffle_epi8(mask_table, next_chunk); // 1 0.5 1*p15
+        let word_shr_3 = _mm_srli_epi16::<3>(next_chunk); // 1 0.5 1*p01
+        table_idx_per_byte = _mm_and_si128(word_shr_3, low_nibble_mask); // 1 0.33 1*p015
+        let not_hexdig_per_byte = _mm_shuffle_epi8(not_hexdig, table_idx_per_byte); // 1 0.5 1*p15
+        let next_nz_if_not_hexdig = _mm_and_si128(not_hexdig_per_byte, mask_per_byte); // 1 0.33 1*p015
+
+        let nz_if_not_hexdig_1 = _mm_alignr_epi8::<1>(next_nz_if_not_hexdig, nz_if_not_hexdig); // 1 1 1*p5
+        let nz_if_not_hexdig_2 = _mm_alignr_epi8::<2>(next_nz_if_not_hexdig, nz_if_not_hexdig); // 1 1 1*p5
+        let nz_if_not_hexdig_1_or_2 = _mm_or_si128(nz_if_not_hexdig_1, nz_if_not_hexdig_2); // 1 0.33 1*p015
+
+        let nz_if_invalid_pct = _mm_min_epu8(is_pct, nz_if_not_hexdig_1_or_2); // 1 0.5 1*p01
+
+        let nz_if_invalid = _mm_or_si128(nz_if_disallowed, nz_if_invalid_pct); // 1 0.33 1*p015
+        let is_valid = _mm_testz_si128(nz_if_invalid, nz_if_invalid); // 4 1 1*p0+1*p5
+
+        if is_valid == 0 {
+            return false;
+        }
+
+        chunk = next_chunk;
+        nz_if_not_hexdig = next_nz_if_not_hexdig;
+        i += 16;
+    }
+    table_bitset::PATH.validate(&src[i..])
+}
+
+#[target_feature(enable = "sse4.1")]
+pub unsafe fn validate_bsrli(src: &[u8]) -> bool {
+    let len = src.len();
+    let ptr = src.as_ptr();
+
+    // the corresponding bit for % is set in this table
+    let allowed = table_bitset::PATH.as_u64s();
+    let disallowed = _mm_set_epi64x(!allowed.1 as _, !allowed.0 as _);
+
+    let hexdig = table_bitset::HEXDIG.as_u64s();
+    let not_hexdig = _mm_set_epi64x(!hexdig.1 as _, !hexdig.0 as _);
+
+    let pct = _mm_set1_epi8(b'%' as _);
+    let low_nibble_mask = _mm_set1_epi8(0xf);
+    let mask_table = _mm_set1_epi64x(0x8040201008040201u64 as _);
+
+    let mut i = 0;
+    while i + 16 <= len {
+        let chunk = _mm_loadu_si128(ptr.add(i).cast()); // 4 0.5 1*p23
+
+        // if non-ASCII, mask will be 0, which disallows the byte
+        let mask_per_byte = _mm_shuffle_epi8(mask_table, chunk); // 1 0.5 1*p15
+
+        let is_pct = _mm_cmpeq_epi8(chunk, pct); // 1 0.5 1*p01
+
+        let word_shr_3 = _mm_srli_epi16::<3>(chunk); // 1 0.5 1*p01
+
+        let table_idx_per_byte = _mm_and_si128(word_shr_3, low_nibble_mask); // 1 0.33 1*p015
+
+        let disallowed_per_byte = _mm_shuffle_epi8(disallowed, table_idx_per_byte); // 1 0.5 1*p15
+        let not_hexdig_per_byte = _mm_shuffle_epi8(not_hexdig, table_idx_per_byte); // 1 0.5 1*p15
+
+        let nz_if_disallowed = _mm_and_si128(disallowed_per_byte, mask_per_byte); // 1 0.33 1*p015
+        let nz_if_not_hexdig = _mm_and_si128(not_hexdig_per_byte, mask_per_byte); // 1 0.33 1*p015
+
+        let nz_if_not_hexdig_1 = _mm_bsrli_si128::<1>(nz_if_not_hexdig); // 1 0.5 1*p15
+        let nz_if_not_hexdig_2 = _mm_bsrli_si128::<2>(nz_if_not_hexdig); // 1 0.5 1*p15
+        let nz_if_not_hexdig_1_or_2 = _mm_or_si128(nz_if_not_hexdig_1, nz_if_not_hexdig_2); // 1 0.33 1*p015
+
+        let nz_if_invalid_pct = _mm_min_epu8(is_pct, nz_if_not_hexdig_1_or_2); // 1 0.5 1*p01
+
+        let nz_if_invalid = _mm_or_si128(nz_if_disallowed, nz_if_invalid_pct); // 1 0.33 1*p015
+        let is_valid = _mm_testz_si128(nz_if_invalid, nz_if_invalid); // 4 1 1*p0+1*p5
+
+        if is_valid == 0 {
+            return false;
+        }
+        i += 14;
+    }
+    table_bitset::PATH.validate(&src[i..])
+}
+
+#[target_feature(enable = "sse4.1")]
+pub unsafe fn validate_bslli(src: &[u8]) -> bool {
+    let len = src.len();
+    let ptr = src.as_ptr();
+
+    // the corresponding bit for % is set in this table
+    let allowed = table_bitset::PATH.as_u64s();
+    let disallowed = _mm_set_epi64x(!allowed.1 as _, !allowed.0 as _);
+
+    let hexdig = table_bitset::HEXDIG.as_u64s();
+    let not_hexdig = _mm_set_epi64x(!hexdig.1 as _, !hexdig.0 as _);
+
+    let pct = _mm_set1_epi8(b'%' as _);
+    let low_nibble_mask = _mm_set1_epi8(0xf);
+    let mask_table = _mm_set1_epi64x(0x8040201008040201u64 as _);
+
+    let mut i = 0;
+    while i + 16 <= len {
+        let chunk = _mm_loadu_si128(ptr.add(i).cast()); // 4 0.5 1*p23
+
+        // if non-ASCII, mask will be 0, which disallows the byte
+        let mask_per_byte = _mm_shuffle_epi8(mask_table, chunk); // 1 0.5 1*p15
+
+        let is_pct = _mm_cmpeq_epi8(chunk, pct); // 1 0.5 1*p01
+        let after_pct_1 = _mm_bslli_si128::<1>(is_pct); // 1 0.5 1*p15
+        let after_pct_2 = _mm_bslli_si128::<2>(is_pct); // 1 0.5 1*p15
+        let after_pct = _mm_or_si128(after_pct_1, after_pct_2); // 1 0.33 1*p015
+
+        let word_shr_3 = _mm_srli_epi16::<3>(chunk); // 1 0.5 1*p01
+
+        let table_idx_per_byte = _mm_and_si128(word_shr_3, low_nibble_mask); // 1 0.33 1*p015
+
+        let disallowed_per_byte = _mm_shuffle_epi8(disallowed, table_idx_per_byte); // 1 0.5 1*p15
+        let not_hexdig_per_byte = _mm_shuffle_epi8(not_hexdig, table_idx_per_byte); // 1 0.5 1*p15
+
+        let nz_if_disallowed = _mm_and_si128(disallowed_per_byte, mask_per_byte); // 1 0.33 1*p015
+        let nz_if_not_hexdig = _mm_and_si128(not_hexdig_per_byte, mask_per_byte); // 1 0.33 1*p015
+
+        let nz_if_disallowed_after_pct = _mm_min_epu8(nz_if_not_hexdig, after_pct); // 1 0.5 1*p01
+
+        let nz_if_invalid = _mm_or_si128(nz_if_disallowed, nz_if_disallowed_after_pct); // 1 0.33 1*p015
+        let is_valid = _mm_testz_si128(nz_if_invalid, nz_if_invalid); // 4 1 1*p0+1*p5
+
+        if is_valid == 0 {
+            return false;
+        }
+        i += 14;
+    }
+    table_bitset::PATH.validate(&src[i..])
+}

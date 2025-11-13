@@ -19,15 +19,15 @@ fn bench_validate(c: &mut Criterion) {
         b.iter(|| table_bool_array::PATH.validate(&src))
     });
     group.bench_function("sse41_triple_loadu", |b| {
-        b.iter(|| unsafe { validate_sse41_triple_loadu(&src) })
+        b.iter(|| unsafe { sse41::validate_triple_loadu(&src) })
     });
     group.bench_function("sse41_alignr", |b| {
-        b.iter(|| unsafe { validate_sse41_alignr(&src) })
+        b.iter(|| unsafe { sse41::validate_alignr(&src) })
     });
     group.bench_function("sse41_bsrli", |b| {
-        b.iter(|| unsafe { validate_sse41_bsrli(&src) })
+        b.iter(|| unsafe { sse41::validate_bsrli(&src) })
     });
     group.bench_function("sse41_bslli", |b| {
-        b.iter(|| unsafe { validate_sse41_bslli(&src) })
+        b.iter(|| unsafe { sse41::validate_bslli(&src) })
     });
 }
