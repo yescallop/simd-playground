@@ -6,6 +6,6 @@ fn main() {
     let src = fs::read("enc.txt").unwrap();
 
     unsafe {
-        println!("{}", sse41::validate_alignr(&src));
+        println!("{}", avx2::validate_alignr(&src));
     }
 }

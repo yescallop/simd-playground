@@ -18,6 +18,7 @@ fn bench_validate(c: &mut Criterion) {
     group.bench_function("naive_bool_array", |b| {
         b.iter(|| table_bool_array::PATH.validate(&src))
     });
+
     group.bench_function("sse41_triple_loadu", |b| {
         b.iter(|| unsafe { sse41::validate_triple_loadu(&src) })
     });
@@ -29,5 +30,9 @@ fn bench_validate(c: &mut Criterion) {
     });
     group.bench_function("sse41_bslli", |b| {
         b.iter(|| unsafe { sse41::validate_bslli(&src) })
+    });
+
+    group.bench_function("avx2_alignr", |b| {
+        b.iter(|| unsafe { avx2::validate_alignr(&src) })
     });
 }
