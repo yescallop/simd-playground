@@ -1,6 +1,7 @@
 #![feature(fn_align)]
 
 pub mod avx2;
+pub mod avx512;
 pub mod naive;
 pub mod sse41;
 

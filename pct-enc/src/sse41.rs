@@ -26,9 +26,9 @@ pub unsafe fn validate_triple_loadu(src: &[u8]) -> bool {
 
         i = 2;
         while i + 16 <= len {
-            let chunk = _mm_loadu_si128(ptr.add(i).cast()); // 4 0.5 1*p23
-            let chunk_minus_1 = _mm_loadu_si128(ptr.add(i - 1).cast()); // 4 0.5 1*p23
-            let chunk_minus_2 = _mm_loadu_si128(ptr.add(i - 2).cast()); // 4 0.5 1*p23
+            let chunk = _mm_loadu_si128(ptr.add(i).cast()); // <=7 0.5 1*p23
+            let chunk_minus_1 = _mm_loadu_si128(ptr.add(i - 1).cast()); // <=7 0.5 1*p23
+            let chunk_minus_2 = _mm_loadu_si128(ptr.add(i - 2).cast()); // <=7 0.5 1*p23
 
             // for non-ASCII, this is 0
             let mask_per_byte = _mm_shuffle_epi8(mask_table, chunk); // 1 0.5 1*p15
@@ -101,7 +101,7 @@ pub unsafe fn validate_alignr(src: &[u8]) -> bool {
         let mut nz_if_hexdig = _mm_and_si128(hexdig_per_byte, mask_per_byte);
 
         while i + 32 <= len {
-            let next_chunk = _mm_loadu_si128(ptr.add(i + 16).cast()); // 4 0.5 1*p23
+            let next_chunk = _mm_loadu_si128(ptr.add(i + 16).cast()); // <=7 0.5 1*p23
 
             let is_pct = _mm_cmpeq_epi8(chunk, pct); // 1 0.5 1*p01
 
@@ -154,7 +154,7 @@ pub unsafe fn validate_bslli(src: &[u8]) -> bool {
 
     let mut i = 0;
     while i + 16 <= len {
-        let chunk = _mm_loadu_si128(ptr.add(i).cast()); // 4 0.5 1*p23
+        let chunk = _mm_loadu_si128(ptr.add(i).cast()); // <=7 0.5 1*p23
 
         // for non-ASCII, this is 0
         let mask_per_byte = _mm_shuffle_epi8(mask_table, chunk); // 1 0.5 1*p15
@@ -209,9 +209,9 @@ pub unsafe fn validate_bslli_transposed(src: &[u8]) -> bool {
 
     let mut i = 0;
     while i + 16 <= len {
-        let chunk = _mm_loadu_si128(ptr.add(i).cast()); // 4 0.5 1*p23
+        let chunk = _mm_loadu_si128(ptr.add(i).cast()); // <=7 0.5 1*p23
 
-        // if non-ASCII, these will be 0
+        // for non-ASCII, these are 0
         let allowed_per_byte = _mm_shuffle_epi8(allowed, chunk); // 1 0.5 1*p15
         let hexdig_per_byte = _mm_shuffle_epi8(hexdig, chunk); // 1 0.5 1*p15
 
@@ -262,7 +262,7 @@ pub unsafe fn validate_bsrli_transposed(src: &[u8]) -> bool {
 
     let mut i = 0;
     while i + 16 <= len {
-        let chunk = _mm_loadu_si128(ptr.add(i).cast()); // 4 0.5 1*p23
+        let chunk = _mm_loadu_si128(ptr.add(i).cast()); // <=7 0.5 1*p23
 
         // if non-ASCII, these will be 0
         let allowed_per_byte = _mm_shuffle_epi8(allowed, chunk); // 1 0.5 1*p15

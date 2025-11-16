@@ -29,7 +29,7 @@ pub unsafe fn validate_triple_loadu(src: &[u8]) -> bool {
 
         i = 2;
         while i + 32 <= len {
-            let chunk = _mm256_loadu_si256(ptr.add(i).cast()); // 5 0.5 1*p23
+            let chunk = _mm256_loadu_si256(ptr.add(i).cast()); // <=8 0.5 1*p23
 
             // for non-ASCII, this is 0
             let mask_per_byte = _mm256_shuffle_epi8(mask_table, chunk); // 1 0.5 1*p15
@@ -41,22 +41,22 @@ pub unsafe fn validate_triple_loadu(src: &[u8]) -> bool {
             let allowed_per_byte = _mm256_shuffle_epi8(allowed, table_idx_per_byte); // 1 0.5 1*p15
             let hexdig_per_byte = _mm256_shuffle_epi8(hexdig, table_idx_per_byte); // 1 0.5 1*p15
 
-            // loadu and cmpeq are fused into vpcmpeqb (ymm, ymm, m256)
+            // loadu and cmpeq are combined into vpcmpeqb (ymm, ymm, m256)
             // it's faster if we put them here than above
-            let chunk_minus_1 = _mm256_loadu_si256(ptr.add(i - 1).cast()); // 5 0.5 1*p23            
-            let chunk_minus_2 = _mm256_loadu_si256(ptr.add(i - 2).cast()); // 5 0.5 1*p23
+            let chunk_minus_1 = _mm256_loadu_si256(ptr.add(i - 1).cast());
+            let chunk_minus_2 = _mm256_loadu_si256(ptr.add(i - 2).cast());
 
-            let after_pct_1 = _mm256_cmpeq_epi8(chunk_minus_1, pct); // 1 0.5 1*p01
-            let after_pct_2 = _mm256_cmpeq_epi8(chunk_minus_2, pct); // 1 0.5 1*p01
+            let after_pct_1 = _mm256_cmpeq_epi8(chunk_minus_1, pct); // with load: <=9 0.5 1*p01+1*p23
+            let after_pct_2 = _mm256_cmpeq_epi8(chunk_minus_2, pct); // with load: <=9 0.5 1*p01+1*p23
             let after_pct = _mm256_or_si256(after_pct_1, after_pct_2); // 1 0.33 1*p015
 
             // unlike with SSE4.1, it is faster to blend the tables first
-            let table_per_byte = _mm256_blendv_epi8(allowed_per_byte, hexdig_per_byte, after_pct); // 1 0.67 2*p015
+            let table_per_byte = _mm256_blendv_epi8(allowed_per_byte, hexdig_per_byte, after_pct); // 1 1 2*p015
             let nz_if_valid = _mm256_and_si256(table_per_byte, mask_per_byte); // 1 0.33 1*p015
 
             // unlike with SSE4.1, it isn't slower to compare with 0
             let is_invalid = _mm256_cmpeq_epi8(nz_if_valid, zero); // 1 0.5 1*p01
-            let is_invalid = _mm256_movemask_epi8(is_invalid); // 4 1 1*p0
+            let is_invalid = _mm256_movemask_epi8(is_invalid); // <=4 1 1*p0
 
             if is_invalid != 0 {
                 return false;
@@ -99,7 +99,7 @@ pub unsafe fn validate_alignr(src: &[u8]) -> bool {
         let mut nz_if_hexdig = _mm256_and_si256(hexdig_per_byte, mask_per_byte);
 
         while i + 64 <= len {
-            let next_chunk = _mm256_loadu_si256(ptr.add(i + 32).cast()); // 5 0.5 1*p23
+            let next_chunk = _mm256_loadu_si256(ptr.add(i + 32).cast()); // <=8 0.5 1*p23
 
             let is_pct = _mm256_cmpeq_epi8(chunk, pct); // 1 0.5 1*p01
 
@@ -121,7 +121,7 @@ pub unsafe fn validate_alignr(src: &[u8]) -> bool {
             let nz_if_valid = _mm256_blendv_epi8(nz_if_allowed, nz_if_hexdig_1_and_2, is_pct); // 1 0.67 2*p015
 
             let is_invalid = _mm256_cmpeq_epi8(nz_if_valid, zero); // 1 0.5 1*p01
-            let is_invalid = _mm256_movemask_epi8(is_invalid); // 4 1 1*p0
+            let is_invalid = _mm256_movemask_epi8(is_invalid); // <=4 1 1*p0
 
             if is_invalid != 0 {
                 return false;
