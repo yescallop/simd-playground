@@ -31,8 +31,23 @@ impl Table {
         Self(table as u64, (table >> 64) as u64)
     }
 
-    pub fn as_u64s(self) -> (u64, u64) {
+    pub const fn bits(self) -> (u64, u64) {
         (self.0, self.1)
+    }
+
+    pub const fn bits_transposed(self) -> (u64, u64) {
+        let x = (self.1 as u128) << 64 | self.0 as u128;
+        let mut y = 0;
+        let mut i = 0;
+        while i < 16 {
+            let mut j = 0;
+            while j < 8 {
+                y |= ((x >> (j * 16 + i)) & 1) << (i * 8 + j);
+                j += 1;
+            }
+            i += 1;
+        }
+        (y as u64, (y >> 64) as u64)
     }
 
     /// Combines two tables into one.
@@ -95,9 +110,6 @@ impl Table {
             };
         }
 
-        // This expansion alone doesn't help much, but combined with
-        // `#[inline(always)]` on `utf8::next_code_point`,
-        // it improves performance significantly for non-ASCII case.
         if self.allows_pct_encoded() {
             do_loop!(true);
         } else {

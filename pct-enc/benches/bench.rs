@@ -25,13 +25,19 @@ fn bench_validate(c: &mut Criterion) {
     group.bench_function("sse41_alignr", |b| {
         b.iter(|| unsafe { sse41::validate_alignr(&src) })
     });
-    group.bench_function("sse41_bsrli", |b| {
-        b.iter(|| unsafe { sse41::validate_bsrli(&src) })
-    });
     group.bench_function("sse41_bslli", |b| {
         b.iter(|| unsafe { sse41::validate_bslli(&src) })
     });
+    group.bench_function("sse41_bslli_transposed", |b| {
+        b.iter(|| unsafe { sse41::validate_bslli_transposed(&src) })
+    });
+    group.bench_function("sse41_bsrli_transposed", |b| {
+        b.iter(|| unsafe { sse41::validate_bsrli_transposed(&src) })
+    });
 
+    group.bench_function("avx2_triple_loadu", |b| {
+        b.iter(|| unsafe { avx2::validate_triple_loadu(&src) })
+    });
     group.bench_function("avx2_alignr", |b| {
         b.iter(|| unsafe { avx2::validate_alignr(&src) })
     });

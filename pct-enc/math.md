@@ -8,18 +8,18 @@
   a,b  : unsigned fixed-width integers with maximum value MAX
   A,B  : sets of integers
 
-# masks
+# mask types
  nz(x) : set of integers, {1, .., MAX} iff x, {0} otherwise (nonzero)
  ao(x) : set of integers, {MAX} iff x, {0, .., MAX-1} otherwise (all ones)
  nm(x) : set of integers, {MAX} iff x, {0} otherwise (normal)
 
 # relations
  A = B : A equals B
-A <- B : A can be rewritten as B (A is a subset of B)
+A <- B : A can be substituted with B (B is a subset of A)
 
 # operators (lifted pointwise to sets)
 a == b : boolean, true iff a equals b
-a != b : boolean, false iff a equals b
+a != b : boolean, true iff a does not equal b
    |   : boolean or bitwise OR
    &   : boolean or bitwise AND
    !   : boolean or bitwise NOT
@@ -46,33 +46,36 @@ nm(!x) = !nm(x)
 nz(x & y) = nm(x) & nz(y) = nz(x) & nm(y)
 ao(x | y) = nm(x) | ao(y) = ao(x) | nm(y)
 
-# rewrite nz or ao as nm
+# substitute nz or ao with nm
 nz(x) <- nm(x)
 ao(x) <- nm(x)
 
 # instructions (lifted pointwise to sets)
 or(a, b) = a | b
 and(a, b) = a & b
-xor(a, b) = a ^ b = nz(a != b)
+xor(a, b) = a ^ b
+ => xor(a, MAX) = !a
+    nz(a != b) <- xor(a, b)
 andn(a, b) = !a & b
-  => xor(a, MAX) = andn(a, MAX) = !a
-cmpeq(a, b) = nm(a == b)
-min(a, b) = a iff a < b, b otherwise
-max(a, b) = a iff a > b, b otherwise
-blend(a, b, c) = b iff c has highest bit set, a otherwise
+ => andn(a, MAX) = !a
 
 # normalize with cmpeq
-nm(!x) = cmpeq(nz(x), 0)
-nm(x) = cmpeq(ao(x), MAX)
+cmpeq(a, b) = MAX iff a == b, 0 otherwise
+ => nm(a == b) = cmpeq(a, b)
+    nm(!x) = cmpeq(nz(x), 0)
+    nm(x) = cmpeq(ao(x), MAX)
 
 # factorize nz(AND) / ao(OR) with min/max
-nz(x & y) = min(nz(x), nz(y))
-ao(x | y) = max(ao(x), ao(y))
+min(a, b) = a iff a < b, b otherwise
+ => nz(x & y) = min(nz(x), nz(y))
+max(a, b) = a iff a > b, b otherwise
+ => ao(x | y) = max(ao(x), ao(y))
 
 # select with blend
-nz((!z & x) | (z & y)) = blend(nz(x), nz(y), nm(z))
-ao((!z & x) | (z & y)) = blend(ao(x), ao(y), nm(z))
-nm((!z & x) | (z & y)) = blend(nm(x), nm(y), nm(z))
+blend(a, b, c) = b iff c has highest bit set, a otherwise
+ => nz((!z & x) | (z & y)) = blend(nz(x), nz(y), nm(z))
+    ao((!z & x) | (z & y)) = blend(ao(x), ao(y), nm(z))
+    nm((!z & x) | (z & y)) = blend(nm(x), nm(y), nm(z))
 ```
 
 ## Example task
@@ -106,7 +109,7 @@ byte
 b'%', 0, 0xff
 ```
 
-Rewrite `nz(valid)` or `nz(!valid)` with an expression
+Substitute `nz(valid)` or `nz(!valid)` with an expression
 consisting only of the given terms and instructions,
 with the minimum number of instructions.
 
@@ -178,11 +181,12 @@ disallowed_after_pct = !hexdig & after_pct
 ```
 nz(!valid)
   = nz(!allowed | disallowed_after_pct)
-  = or(nz(!allowed), nz(disallowed_after_pct))
+  = or(nz(!allowed), nz(!hexdig & after_pct))
+  = or(nz(!allowed), and(nz(!hexdig), nm(after_pct)))
 
-nz(disallowed_after_pct)
-  = nz(!hexdig & after_pct)
-  = and(nz(!hexdig), nm(after_pct))
+nz(valid)
+  = nz(allowed & !disallowed_after_pct)
+  = min(nz(allowed), nz(hexdig | !after_pct))
 ```
 
 Or use the alternative form:
@@ -190,7 +194,7 @@ Or use the alternative form:
 ```
 valid = (!after_pct & allowed) | (after_pct & hexdig)
 
-nz(!valid)
-  = nz((!after_pct & !allowed) | (after_pct & !hexdig))
-  = blend(nz(!allowed), nz(!hexdig), nm(after_pct))
+nz(valid)
+  = nz((!after_pct & allowed) | (after_pct & hexdig))
+  = blend(nz(allowed), nz(hexdig), nm(after_pct))
 ```
