@@ -3,7 +3,7 @@ use std::arch::x86_64::*;
 
 #[rustc_align(64)]
 #[target_feature(enable = "avx2")]
-pub unsafe fn validate_triple_loadu(src: &[u8]) -> bool {
+pub unsafe fn validate_3load(src: &[u8]) -> bool {
     let len = src.len();
     let ptr = src.as_ptr();
 

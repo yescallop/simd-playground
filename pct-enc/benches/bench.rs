@@ -19,36 +19,33 @@ fn bench_validate(c: &mut Criterion) {
         b.iter(|| table_bool_array::PATH.validate(&src))
     });
 
-    group.bench_function("sse41_triple_loadu", |b| {
-        b.iter(|| unsafe { sse41::validate_triple_loadu(&src) })
+    group.bench_function("sse41_3load", |b| {
+        b.iter(|| unsafe { sse41::validate_3load(&src) })
     });
     group.bench_function("sse41_alignr", |b| {
         b.iter(|| unsafe { sse41::validate_alignr(&src) })
     });
-    group.bench_function("sse41_bslli", |b| {
-        b.iter(|| unsafe { sse41::validate_bslli(&src) })
+    group.bench_function("sse41_shift", |b| {
+        b.iter(|| unsafe { sse41::validate_shift(&src) })
     });
-    group.bench_function("sse41_bslli_transposed", |b| {
-        b.iter(|| unsafe { sse41::validate_bslli_transposed(&src) })
-    });
-    group.bench_function("sse41_bsrli_transposed", |b| {
-        b.iter(|| unsafe { sse41::validate_bsrli_transposed(&src) })
+    group.bench_function("sse41_shift_transposed", |b| {
+        b.iter(|| unsafe { sse41::validate_shift_transposed(&src) })
     });
 
-    group.bench_function("avx2_triple_loadu", |b| {
-        b.iter(|| unsafe { avx2::validate_triple_loadu(&src) })
+    group.bench_function("avx2_3load", |b| {
+        b.iter(|| unsafe { avx2::validate_3load(&src) })
     });
     group.bench_function("avx2_alignr", |b| {
         b.iter(|| unsafe { avx2::validate_alignr(&src) })
     });
 
-    group.bench_function("avx512_triple_loadu", |b| {
-        b.iter(|| unsafe { avx512::validate_triple_loadu(&src) })
+    group.bench_function("avx512_3load", |b| {
+        b.iter(|| unsafe { avx512::validate_3load(&src) })
     });
-    group.bench_function("avx512_triple_loadu_gf2p8affine", |b| {
-        b.iter(|| unsafe { avx512::validate_triple_loadu_gf2p8affine(&src) })
+    group.bench_function("avx512_3load_gf2p8affine", |b| {
+        b.iter(|| unsafe { avx512::validate_3load_gf2p8affine(&src) })
     });
-    group.bench_function("avx512_triple_loadu_permutex2var", |b| {
-        b.iter(|| unsafe { avx512::validate_triple_loadu_permutex2var(&src) })
+    group.bench_function("avx512_3load_perm", |b| {
+        b.iter(|| unsafe { avx512::validate_3load_perm(&src) })
     });
 }

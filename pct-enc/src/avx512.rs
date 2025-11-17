@@ -3,7 +3,7 @@ use std::arch::x86_64::*;
 
 #[rustc_align(64)]
 #[target_feature(enable = "avx512bw")]
-pub unsafe fn validate_triple_loadu(src: &[u8]) -> bool {
+pub unsafe fn validate_3load(src: &[u8]) -> bool {
     let len = src.len();
     let ptr = src.as_ptr();
 
@@ -70,7 +70,7 @@ pub unsafe fn validate_triple_loadu(src: &[u8]) -> bool {
 
 #[rustc_align(64)]
 #[target_feature(enable = "avx512bw,gfni")]
-pub unsafe fn validate_triple_loadu_gf2p8affine(src: &[u8]) -> bool {
+pub unsafe fn validate_3load_gf2p8affine(src: &[u8]) -> bool {
     let len = src.len();
     let ptr = src.as_ptr();
 
@@ -135,7 +135,7 @@ pub unsafe fn validate_triple_loadu_gf2p8affine(src: &[u8]) -> bool {
 
 #[rustc_align(64)]
 #[target_feature(enable = "avx512bw,avx512vbmi")]
-pub unsafe fn validate_triple_loadu_permutex2var(src: &[u8]) -> bool {
+pub unsafe fn validate_3load_perm(src: &[u8]) -> bool {
     let len = src.len();
     let ptr = src.as_ptr();
 
