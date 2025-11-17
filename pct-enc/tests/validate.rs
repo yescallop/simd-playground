@@ -3,6 +3,7 @@ use pct_enc::*;
 #[test]
 fn test_validate() {
     let fns = [
+        ssse3::validate_3load,
         sse41::validate_3load,
         sse41::validate_alignr,
         sse41::validate_shift,

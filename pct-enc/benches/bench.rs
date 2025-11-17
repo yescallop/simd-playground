@@ -19,6 +19,10 @@ fn bench_validate(c: &mut Criterion) {
         b.iter(|| table_bool_array::PATH.validate(&src))
     });
 
+    group.bench_function("ssse3_3load", |b| {
+        b.iter(|| unsafe { ssse3::validate_3load(&src) })
+    });
+
     group.bench_function("sse41_3load", |b| {
         b.iter(|| unsafe { sse41::validate_3load(&src) })
     });

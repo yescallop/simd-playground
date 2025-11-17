@@ -4,6 +4,7 @@ pub mod avx2;
 pub mod avx512;
 pub mod naive;
 pub mod sse41;
+pub mod ssse3;
 
 use crate::naive::table_bitset;
 

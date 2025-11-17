@@ -16,6 +16,7 @@ unsafe fn _part1_avx512(input: &[u8]) -> u64 {
     let buf_ptr = &mut buf as *mut Buf as *mut u8;
     let mut buf_len = 0;
 
+    #[expect(unused)]
     if input[1] == b'-' {
         buf.0[0] = b'0';
         buf_len += 1;
