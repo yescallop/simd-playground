@@ -165,13 +165,6 @@ pub unsafe fn validate_3load_perm(src: &[u8]) -> bool {
         while i + 64 <= len {
             let chunk = _mm512_loadu_si512(ptr.add(i).cast()); // <=8 0.5 1*p23
 
-            // cmpge turns into vpmovb2m+knotq, while
-            // this turns into vpcmpb, which is odd
-            let is_ascii = !_mm512_movepi8_mask(chunk); // vpcmpb: 3 1 1*p5
-
-            let table_per_byte =
-                _mm512_maskz_permutex2var_epi8(is_ascii, table_lo, chunk, table_hi); // 6 2 1*p05+2*p5
-
             // loadu and cmpeq are combined into vpcmpeqb (k, zmm, m512)
             let chunk_minus_1 = _mm512_loadu_si512(ptr.add(i - 1).cast());
             let chunk_minus_2 = _mm512_loadu_si512(ptr.add(i - 2).cast());
@@ -179,6 +172,13 @@ pub unsafe fn validate_3load_perm(src: &[u8]) -> bool {
             let after_pct_1 = _mm512_cmpeq_epi8_mask(chunk_minus_1, pct); // 3 1 1*p5; with load: n/a
             let after_pct_2 = _mm512_cmpeq_epi8_mask(chunk_minus_2, pct); // 3 1 1*p5; with load: n/a
             let after_pct = after_pct_1 | after_pct_2; // korq: 1 1 1*p0
+
+            // cmpge_epi8 turns into vpmovb2m+knotq, while
+            // movepi8_mask turns into vpcmpb, which is odd
+            let is_ascii = !_mm512_movepi8_mask(chunk); // vpcmpb: 3 1 1*p5
+
+            let table_per_byte =
+                _mm512_maskz_permutex2var_epi8(is_ascii, table_lo, chunk, table_hi); // 6 2 1*p05+2*p5
 
             // this turns into vpblendmd (zmm, k, zmm, m512)
             // which benches faster than (.., zmm) I really don't know why

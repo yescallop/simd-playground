@@ -171,6 +171,7 @@ pub unsafe fn validate_shift(src: &[u8]) -> bool {
         let mut after_pct = _mm_or_si128(after_pct_1, after_pct_2); // 1 0.33 1*p015
         after_pct = _mm_or_si128(after_pct, after_pct_1_prev); // 1 0.33 1*p015
         after_pct = _mm_or_si128(after_pct, after_pct_2_prev); // 1 0.33 1*p015
+
         is_pct_prev = is_pct;
 
         let word_shr_3 = _mm_srli_epi16::<3>(chunk); // 1 0.5 1*p01
@@ -234,6 +235,7 @@ pub unsafe fn validate_shift_transposed(src: &[u8]) -> bool {
         let mut after_pct = _mm_or_si128(after_pct_1, after_pct_2); // 1 0.33 1*p015
         after_pct = _mm_or_si128(after_pct, after_pct_1_prev); // 1 0.33 1*p015
         after_pct = _mm_or_si128(after_pct, after_pct_2_prev); // 1 0.33 1*p015
+
         is_pct_prev = is_pct;
 
         let word_shr_4 = _mm_srli_epi16::<4>(chunk); // 1 0.5 1*p01
