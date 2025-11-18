@@ -28,7 +28,7 @@ pub unsafe fn validate_3load(src: &[u8]) -> bool {
         let byte_lo_4_mask = _mm512_set1_epi8(0xf);
         let mask_table = _mm512_set1_epi64(0x8040201008040201u64 as _);
 
-        while i + 64 + 2 <= len {
+        while i <= len - 64 - 2 {
             let chunk = _mm512_loadu_si512(ptr.add(i + 2).cast()); // <=8 0.5 1*p23
 
             // for non-ASCII, this is 0
@@ -94,7 +94,7 @@ pub unsafe fn validate_3load_gf2p8affine(src: &[u8]) -> bool {
         let srl_3_matrix = _mm512_set1_epi64(0x0102040810204080 << 3);
         let mask_table = _mm512_set1_epi64(0x8040201008040201u64 as _);
 
-        while i + 64 + 2 <= len {
+        while i <= len - 64 - 2 {
             let chunk = _mm512_loadu_si512(ptr.add(i + 2).cast()); // <=8 0.5 1*p23
 
             // for non-ASCII, this is 0
@@ -159,7 +159,7 @@ pub unsafe fn validate_3load_perm(src: &[u8]) -> bool {
 
         let pct = _mm512_set1_epi8(b'%' as _);
 
-        while i + 64 + 2 <= len {
+        while i <= len - 64 - 2 {
             let chunk = _mm512_loadu_si512(ptr.add(i + 2).cast()); // <=8 0.5 1*p23
 
             // loadu and cmpeq are combined into vpcmpeqb (k, zmm, m512)

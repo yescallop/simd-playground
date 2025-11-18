@@ -24,7 +24,7 @@ pub unsafe fn validate_3load(src: &[u8]) -> bool {
         let byte_lo_4_mask = _mm_set1_epi8(0xf);
         let mask_table = _mm_set1_epi64x(0x8040201008040201u64 as _);
 
-        while i + 16 + 2 <= len {
+        while i <= len - 16 - 2 {
             let chunk = _mm_loadu_si128(ptr.add(i + 2).cast()); // <=7 0.5 1*p23
             let chunk_l1 = _mm_loadu_si128(ptr.add(i + 1).cast()); // <=7 0.5 1*p23
             let chunk_l2 = _mm_loadu_si128(ptr.add(i).cast()); // <=7 0.5 1*p23

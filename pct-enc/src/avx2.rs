@@ -27,7 +27,7 @@ pub unsafe fn validate_3load(src: &[u8]) -> bool {
         let mask_table = _mm256_set1_epi64x(0x8040201008040201u64 as _);
         let zero = _mm256_setzero_si256();
 
-        while i + 32 + 2 <= len {
+        while i <= len - 32 - 2 {
             let chunk = _mm256_loadu_si256(ptr.add(i + 2).cast()); // <=8 0.5 1*p23
 
             // for non-ASCII, this is 0
