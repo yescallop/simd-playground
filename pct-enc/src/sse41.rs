@@ -136,7 +136,7 @@ pub unsafe fn validate_alignr(src: &[u8]) -> bool {
 
 #[rustc_align(64)]
 #[target_feature(enable = "sse4.1")]
-pub unsafe fn validate_shift(src: &[u8]) -> bool {
+pub unsafe fn validate_alignl(src: &[u8]) -> bool {
     let len = src.len();
     let ptr = src.as_ptr();
 
@@ -162,14 +162,9 @@ pub unsafe fn validate_shift(src: &[u8]) -> bool {
 
         let is_pct = _mm_cmpeq_epi8(chunk, pct); // 1 0.5 1*p01
 
-        let after_pct_1 = _mm_bslli_si128::<1>(is_pct); // 1 0.5 1*p15
-        let after_pct_2 = _mm_bslli_si128::<2>(is_pct); // 1 0.5 1*p15
-        let after_pct_1_prev = _mm_bsrli_si128::<15>(is_pct_prev); // 1 0.5 1*p15
-        let after_pct_2_prev = _mm_bsrli_si128::<14>(is_pct_prev); // 1 0.5 1*p15
-
-        let mut after_pct = _mm_or_si128(after_pct_1, after_pct_2); // 1 0.33 1*p015
-        after_pct = _mm_or_si128(after_pct, after_pct_1_prev); // 1 0.33 1*p015
-        after_pct = _mm_or_si128(after_pct, after_pct_2_prev); // 1 0.33 1*p015
+        let after_pct_1 = _mm_alignr_epi8::<15>(is_pct, is_pct_prev); // 1 1 1*p5
+        let after_pct_2 = _mm_alignr_epi8::<14>(is_pct, is_pct_prev); // 1 1 1*p5
+        let after_pct = _mm_or_si128(after_pct_1, after_pct_2); // 1 0.33 1*p015
 
         is_pct_prev = is_pct;
 
@@ -194,66 +189,6 @@ pub unsafe fn validate_shift(src: &[u8]) -> bool {
         }
         i += 16;
     }
-    table_bitset::PATH.validate(&src[i..])
-}
-
-#[rustc_align(64)]
-#[target_feature(enable = "sse4.1")]
-pub unsafe fn validate_shift_transposed(src: &[u8]) -> bool {
-    let len = src.len();
-    let ptr = src.as_ptr();
-
-    // the corresponding bit for % is set in this table
-    let allowed = table_bitset::PATH.bits_transposed();
-    let allowed = _mm_set_epi64x(allowed.1 as _, allowed.0 as _);
-
-    let hexdig = table_bitset::HEXDIG.bits_transposed();
-    let hexdig = _mm_set_epi64x(hexdig.1 as _, hexdig.0 as _);
-
-    let pct = _mm_set1_epi8(b'%' as _);
-    let byte_lo_3_mask = _mm_set1_epi8(0b111);
-    let mask_table = _mm_set1_epi64x(0x8040201008040201u64 as _);
-
-    let mut is_pct_prev = _mm_setzero_si128();
-
-    let mut i = 0;
-    while i + 16 <= len {
-        let chunk = _mm_loadu_si128(ptr.add(i).cast()); // <=7 0.5 1*p23
-
-        // for non-ASCII, these are 0
-        let allowed_per_byte = _mm_shuffle_epi8(allowed, chunk); // 1 0.5 1*p15
-        let hexdig_per_byte = _mm_shuffle_epi8(hexdig, chunk); // 1 0.5 1*p15
-
-        let is_pct = _mm_cmpeq_epi8(chunk, pct); // 1 0.5 1*p01
-
-        let after_pct_1 = _mm_bslli_si128::<1>(is_pct); // 1 0.5 1*p15
-        let after_pct_2 = _mm_bslli_si128::<2>(is_pct); // 1 0.5 1*p15
-        let after_pct_1_prev = _mm_bsrli_si128::<15>(is_pct_prev); // 1 0.5 1*p15
-        let after_pct_2_prev = _mm_bsrli_si128::<14>(is_pct_prev); // 1 0.5 1*p15
-
-        let mut after_pct = _mm_or_si128(after_pct_1, after_pct_2); // 1 0.33 1*p015
-        after_pct = _mm_or_si128(after_pct, after_pct_1_prev); // 1 0.33 1*p015
-        after_pct = _mm_or_si128(after_pct, after_pct_2_prev); // 1 0.33 1*p015
-
-        is_pct_prev = is_pct;
-
-        let word_shr_4 = _mm_srli_epi16::<4>(chunk); // 1 0.5 1*p01
-
-        let mask_idx_per_byte = _mm_and_si128(word_shr_4, byte_lo_3_mask); // 1 0.33 1*p015
-        let mask_per_byte = _mm_shuffle_epi8(mask_table, mask_idx_per_byte); // 1 0.5 1*p15
-
-        // nz: nonzero. for non-ASCII, these are nonzero
-        let nz_if_disallowed = _mm_andnot_si128(allowed_per_byte, mask_per_byte); // 1 0.33 1*p015
-        let nz_if_not_hexdig = _mm_andnot_si128(hexdig_per_byte, mask_per_byte); // 1 0.33 1*p015
-
-        let nz_if_invalid = _mm_blendv_epi8(nz_if_disallowed, nz_if_not_hexdig, after_pct); // 1 0.33 1*p015
-
-        let is_valid = _mm_testz_si128(nz_if_invalid, nz_if_invalid); // 4 1 1*p0+1*p5
-
-        if is_valid == 0 {
-            return false;
-        }
-        i += 16;
-    }
+    i = i.saturating_sub(2);
     table_bitset::PATH.validate(&src[i..])
 }

@@ -84,7 +84,7 @@ pub unsafe fn validate_alignr(src: &[u8]) -> bool {
         let hexdig = _mm256_broadcastsi128_si256(hexdig);
 
         let pct = _mm256_set1_epi8(b'%' as _);
-        let low_nibble_mask = _mm256_set1_epi8(0xf);
+        let byte_lo_4_mask = _mm256_set1_epi8(0xf);
         let mask_table = _mm256_set1_epi64x(0x8040201008040201u64 as _);
         let zero = _mm256_setzero_si256();
 
@@ -93,7 +93,7 @@ pub unsafe fn validate_alignr(src: &[u8]) -> bool {
         // for non-ASCII, this is 0
         let mut mask_per_byte = _mm256_shuffle_epi8(mask_table, chunk);
         let word_shr_3 = _mm256_srli_epi16::<3>(chunk);
-        let mut table_idx_per_byte = _mm256_and_si256(word_shr_3, low_nibble_mask);
+        let mut table_idx_per_byte = _mm256_and_si256(word_shr_3, byte_lo_4_mask);
         let hexdig_per_byte = _mm256_shuffle_epi8(hexdig, table_idx_per_byte);
         let mut nz_if_hexdig = _mm256_and_si256(hexdig_per_byte, mask_per_byte);
 
@@ -107,7 +107,7 @@ pub unsafe fn validate_alignr(src: &[u8]) -> bool {
 
             mask_per_byte = _mm256_shuffle_epi8(mask_table, next_chunk); // 1 0.5 1*p15
             let word_shr_3 = _mm256_srli_epi16::<3>(next_chunk); // 1 0.5 1*p01
-            table_idx_per_byte = _mm256_and_si256(word_shr_3, low_nibble_mask); // 1 0.33 1*p015
+            table_idx_per_byte = _mm256_and_si256(word_shr_3, byte_lo_4_mask); // 1 0.33 1*p015
             let hexdig_per_byte = _mm256_shuffle_epi8(hexdig, table_idx_per_byte); // 1 0.5 1*p15
             let next_nz_if_hexdig = _mm256_and_si256(hexdig_per_byte, mask_per_byte); // 1 0.33 1*p015
 
@@ -131,5 +131,65 @@ pub unsafe fn validate_alignr(src: &[u8]) -> bool {
             i += 32;
         }
     }
+    table_bitset::PATH.validate(&src[i..])
+}
+
+#[rustc_align(64)]
+#[target_feature(enable = "avx2")]
+pub unsafe fn validate_alignl(src: &[u8]) -> bool {
+    let len = src.len();
+    let ptr = src.as_ptr();
+
+    // the corresponding bit for % is set in this table
+    let allowed = table_bitset::PATH.bits();
+    let allowed = _mm_set_epi64x(allowed.1 as _, allowed.0 as _);
+    let allowed = _mm256_broadcastsi128_si256(allowed);
+
+    let hexdig = table_bitset::HEXDIG.bits();
+    let hexdig = _mm_set_epi64x(hexdig.1 as _, hexdig.0 as _);
+    let hexdig = _mm256_broadcastsi128_si256(hexdig);
+
+    let pct = _mm256_set1_epi8(b'%' as _);
+    let byte_lo_4_mask = _mm256_set1_epi8(0xf);
+    let mask_table = _mm256_set1_epi64x(0x8040201008040201u64 as _);
+    let zero = _mm256_setzero_si256();
+
+    let mut is_pct_prev = _mm256_setzero_si256();
+
+    let mut i = 0;
+    while i + 32 <= len {
+        let chunk = _mm256_loadu_si256(ptr.add(i).cast()); // <=7 0.5 1*p23
+
+        // for non-ASCII, this is 0
+        let mask_per_byte = _mm256_shuffle_epi8(mask_table, chunk); // 1 0.5 1*p15
+
+        let is_pct = _mm256_cmpeq_epi8(chunk, pct); // 1 0.5 1*p01
+
+        let is_pct_prev_16 = _mm256_permute2x128_si256::<0x03>(is_pct, is_pct_prev);
+        let after_pct_1 = _mm256_alignr_epi8::<15>(is_pct, is_pct_prev_16); // 1 1 1*p5
+        let after_pct_2 = _mm256_alignr_epi8::<14>(is_pct, is_pct_prev_16); // 1 1 1*p5
+        let after_pct = _mm256_or_si256(after_pct_1, after_pct_2); // 1 0.33 1*p015
+
+        is_pct_prev = is_pct;
+
+        let word_shr_3 = _mm256_srli_epi16::<3>(chunk); // 1 0.5 1*p01
+
+        let table_idx_per_byte = _mm256_and_si256(word_shr_3, byte_lo_4_mask); // 1 0.33 1*p015
+
+        let allowed_per_byte = _mm256_shuffle_epi8(allowed, table_idx_per_byte); // 1 0.5 1*p15
+        let hexdig_per_byte = _mm256_shuffle_epi8(hexdig, table_idx_per_byte); // 1 0.5 1*p15
+
+        let table_per_byte = _mm256_blendv_epi8(allowed_per_byte, hexdig_per_byte, after_pct); // 1 1 2*p015
+        let nz_if_valid = _mm256_and_si256(table_per_byte, mask_per_byte); // 1 0.33 1*p015
+
+        let is_invalid = _mm256_cmpeq_epi8(nz_if_valid, zero); // 1 0.5 1*p01
+        let is_invalid = _mm256_movemask_epi8(is_invalid); // <=4 1 1*p0
+
+        if is_invalid != 0 {
+            return false;
+        }
+        i += 32;
+    }
+    i = i.saturating_sub(2);
     table_bitset::PATH.validate(&src[i..])
 }

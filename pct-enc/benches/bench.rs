@@ -29,11 +29,8 @@ fn bench_validate(c: &mut Criterion) {
     group.bench_function("sse41_alignr", |b| {
         b.iter(|| unsafe { sse41::validate_alignr(&src) })
     });
-    group.bench_function("sse41_shift", |b| {
-        b.iter(|| unsafe { sse41::validate_shift(&src) })
-    });
-    group.bench_function("sse41_shift_transposed", |b| {
-        b.iter(|| unsafe { sse41::validate_shift_transposed(&src) })
+    group.bench_function("sse41_alignl", |b| {
+        b.iter(|| unsafe { sse41::validate_alignl(&src) })
     });
 
     group.bench_function("avx2_3load", |b| {
@@ -41,6 +38,9 @@ fn bench_validate(c: &mut Criterion) {
     });
     group.bench_function("avx2_alignr", |b| {
         b.iter(|| unsafe { avx2::validate_alignr(&src) })
+    });
+    group.bench_function("avx2_alignl", |b| {
+        b.iter(|| unsafe { avx2::validate_alignl(&src) })
     });
 
     group.bench_function("avx512_3load", |b| {

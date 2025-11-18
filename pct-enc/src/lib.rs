@@ -12,15 +12,8 @@ use crate::naive::table_bitset;
 fn validate_first_two(src: &[u8]) -> bool {
     let (a, b) = (src[0], src[1]);
     if a == b'%' {
-        if !table_bitset::HEXDIG.allows_ascii(b) {
-            return false;
-        }
-    } else if b == b'%' {
-        if !table_bitset::PATH.allows_ascii(a) {
-            return false;
-        }
-    } else if !table_bitset::PATH.allows_ascii(a) || !table_bitset::PATH.allows_ascii(b) {
-        return false;
+        table_bitset::HEXDIG.allows_ascii(b)
+    } else {
+        table_bitset::PATH.allows_ascii_with_pct(a) || table_bitset::PATH.allows_ascii_with_pct(b)
     }
-    true
 }

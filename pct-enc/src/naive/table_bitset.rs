@@ -77,6 +77,18 @@ impl Table {
         table & 1u64.wrapping_shl(x as u32) != 0
     }
 
+    #[inline]
+    pub(crate) const fn allows_ascii_with_pct(self, x: u8) -> bool {
+        let table = if x < 64 {
+            self.0
+        } else if x < 128 {
+            self.1
+        } else {
+            0
+        };
+        table & 1u64.wrapping_shl(x as u32) != 0
+    }
+
     /// Checks whether percent-encoded octets are allowed by the table.
     #[inline]
     #[must_use]
