@@ -27,9 +27,8 @@ pub unsafe fn validate_3load(src: &[u8]) -> bool {
         let mask_table = _mm256_set1_epi64x(0x8040201008040201u64 as _);
         let zero = _mm256_setzero_si256();
 
-        i = 2;
-        while i + 32 <= len {
-            let chunk = _mm256_loadu_si256(ptr.add(i).cast()); // <=8 0.5 1*p23
+        while i + 32 + 2 <= len {
+            let chunk = _mm256_loadu_si256(ptr.add(i + 2).cast()); // <=8 0.5 1*p23
 
             // for non-ASCII, this is 0
             let mask_per_byte = _mm256_shuffle_epi8(mask_table, chunk); // 1 0.5 1*p15
@@ -43,11 +42,11 @@ pub unsafe fn validate_3load(src: &[u8]) -> bool {
 
             // loadu and cmpeq are combined into vpcmpeqb (ymm, ymm, m256)
             // it's faster if we put them here than above
-            let chunk_minus_1 = _mm256_loadu_si256(ptr.add(i - 1).cast());
-            let chunk_minus_2 = _mm256_loadu_si256(ptr.add(i - 2).cast());
+            let chunk_l1 = _mm256_loadu_si256(ptr.add(i + 1).cast());
+            let chunk_l2 = _mm256_loadu_si256(ptr.add(i).cast());
 
-            let after_pct_1 = _mm256_cmpeq_epi8(chunk_minus_1, pct); // with load: <=9 0.5 1*p01+1*p23
-            let after_pct_2 = _mm256_cmpeq_epi8(chunk_minus_2, pct); // with load: <=9 0.5 1*p01+1*p23
+            let after_pct_1 = _mm256_cmpeq_epi8(chunk_l1, pct); // with load: <=9 0.5 1*p01+1*p23
+            let after_pct_2 = _mm256_cmpeq_epi8(chunk_l2, pct); // with load: <=9 0.5 1*p01+1*p23
             let after_pct = _mm256_or_si256(after_pct_1, after_pct_2); // 1 0.33 1*p015
 
             // unlike with SSE4.1, it is faster to blend the tables first

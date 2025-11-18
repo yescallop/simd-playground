@@ -22,6 +22,7 @@ fn test_validate() {
         b"%3C%88\0,Kh%9C%3E%90%3F@%BB%B4%E8%96%18%9F%3C%5C%93@%1D%CD%25%13%3F%99%1CP%FA%88%EA";
     let non_ascii =
         b"%3C%88\xf0,Kh%9C%3E%90%3F@%BB%B4%E8%96%18%9F%3C%5C%93@%1D%CD%25%13%3F%99%1CP%FA%88%EA";
+    let incomplete = b"%3C%88,Kh%9C%3E%90%3F@%BB%B4%E8%96%18%9F%3C%5C%93%1D%CD%25%13%3F%9";
 
     for (i, f) in fns.into_iter().enumerate() {
         unsafe {
@@ -29,6 +30,7 @@ fn test_validate() {
             assert!(!f(not_hexdig), "disallowed failed on {i}");
             assert!(!f(null), "null failed on {i}");
             assert!(!f(non_ascii), "non-ASCII failed on {i}");
+            assert!(!f(incomplete), "incomplete failed on {i}");
         }
     }
 }

@@ -28,20 +28,19 @@ pub unsafe fn validate_3load(src: &[u8]) -> bool {
         let byte_lo_4_mask = _mm512_set1_epi8(0xf);
         let mask_table = _mm512_set1_epi64(0x8040201008040201u64 as _);
 
-        i = 2;
-        while i + 64 <= len {
-            let chunk = _mm512_loadu_si512(ptr.add(i).cast()); // <=8 0.5 1*p23
+        while i + 64 + 2 <= len {
+            let chunk = _mm512_loadu_si512(ptr.add(i + 2).cast()); // <=8 0.5 1*p23
 
             // for non-ASCII, this is 0
             let mask_per_byte = _mm512_shuffle_epi8(mask_table, chunk); // 1 1 1*p5
 
             // loadu and cmpeq are combined into vpcmpeqb (k, zmm, m512)
             // unlike with AVX2, it is insignificant whether we put them here or below
-            let chunk_minus_1 = _mm512_loadu_si512(ptr.add(i - 1).cast());
-            let chunk_minus_2 = _mm512_loadu_si512(ptr.add(i - 2).cast());
+            let chunk_l1 = _mm512_loadu_si512(ptr.add(i + 1).cast());
+            let chunk_l2 = _mm512_loadu_si512(ptr.add(i).cast());
 
-            let after_pct_1 = _mm512_cmpeq_epi8_mask(chunk_minus_1, pct); // 3 1 1*p5; with load: n/a
-            let after_pct_2 = _mm512_cmpeq_epi8_mask(chunk_minus_2, pct); // 3 1 1*p5; with load: n/a
+            let after_pct_1 = _mm512_cmpeq_epi8_mask(chunk_l1, pct); // 3 1 1*p5; with load: n/a
+            let after_pct_2 = _mm512_cmpeq_epi8_mask(chunk_l2, pct); // 3 1 1*p5; with load: n/a
             let after_pct = after_pct_1 | after_pct_2; // korq: 1 1 1*p0
 
             let word_shr_3 = _mm512_srli_epi16::<3>(chunk); // 1 1 1*p0
@@ -95,20 +94,19 @@ pub unsafe fn validate_3load_gf2p8affine(src: &[u8]) -> bool {
         let srl_3_matrix = _mm512_set1_epi64(0x0102040810204080 << 3);
         let mask_table = _mm512_set1_epi64(0x8040201008040201u64 as _);
 
-        i = 2;
-        while i + 64 <= len {
-            let chunk = _mm512_loadu_si512(ptr.add(i).cast()); // <=8 0.5 1*p23
+        while i + 64 + 2 <= len {
+            let chunk = _mm512_loadu_si512(ptr.add(i + 2).cast()); // <=8 0.5 1*p23
 
             // for non-ASCII, this is 0
             let mask_per_byte = _mm512_shuffle_epi8(mask_table, chunk); // 1 1 1*p5
 
             // loadu and cmpeq are combined into vpcmpeqb (k, zmm, m512)
             // unlike with AVX2, it is insignificant whether we put them here or below
-            let chunk_minus_1 = _mm512_loadu_si512(ptr.add(i - 1).cast());
-            let chunk_minus_2 = _mm512_loadu_si512(ptr.add(i - 2).cast());
+            let chunk_l1 = _mm512_loadu_si512(ptr.add(i + 1).cast());
+            let chunk_l2 = _mm512_loadu_si512(ptr.add(i).cast());
 
-            let after_pct_1 = _mm512_cmpeq_epi8_mask(chunk_minus_1, pct); // 3 1 1*p5; with load: n/a
-            let after_pct_2 = _mm512_cmpeq_epi8_mask(chunk_minus_2, pct); // 3 1 1*p5; with load: n/a
+            let after_pct_1 = _mm512_cmpeq_epi8_mask(chunk_l1, pct); // 3 1 1*p5; with load: n/a
+            let after_pct_2 = _mm512_cmpeq_epi8_mask(chunk_l2, pct); // 3 1 1*p5; with load: n/a
             let after_pct = after_pct_1 | after_pct_2; // korq: 1 1 1*p0
 
             let table_idx_per_byte = _mm512_gf2p8affine_epi64_epi8::<0>(chunk, srl_3_matrix); // 5 1 1*p0
@@ -161,16 +159,15 @@ pub unsafe fn validate_3load_perm(src: &[u8]) -> bool {
 
         let pct = _mm512_set1_epi8(b'%' as _);
 
-        i = 2;
-        while i + 64 <= len {
-            let chunk = _mm512_loadu_si512(ptr.add(i).cast()); // <=8 0.5 1*p23
+        while i + 64 + 2 <= len {
+            let chunk = _mm512_loadu_si512(ptr.add(i + 2).cast()); // <=8 0.5 1*p23
 
             // loadu and cmpeq are combined into vpcmpeqb (k, zmm, m512)
-            let chunk_minus_1 = _mm512_loadu_si512(ptr.add(i - 1).cast());
-            let chunk_minus_2 = _mm512_loadu_si512(ptr.add(i - 2).cast());
+            let chunk_l1 = _mm512_loadu_si512(ptr.add(i + 1).cast());
+            let chunk_l2 = _mm512_loadu_si512(ptr.add(i).cast());
 
-            let after_pct_1 = _mm512_cmpeq_epi8_mask(chunk_minus_1, pct); // 3 1 1*p5; with load: n/a
-            let after_pct_2 = _mm512_cmpeq_epi8_mask(chunk_minus_2, pct); // 3 1 1*p5; with load: n/a
+            let after_pct_1 = _mm512_cmpeq_epi8_mask(chunk_l1, pct); // 3 1 1*p5; with load: n/a
+            let after_pct_2 = _mm512_cmpeq_epi8_mask(chunk_l2, pct); // 3 1 1*p5; with load: n/a
             let after_pct = after_pct_1 | after_pct_2; // korq: 1 1 1*p0
 
             // cmpge_epi8 turns into vpmovb2m+knotq, while
